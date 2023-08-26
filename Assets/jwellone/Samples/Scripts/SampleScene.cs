@@ -1,6 +1,5 @@
-using System.Text;
+using System.Collections;
 using UnityEngine;
-using UnityEngine.UI;
 
 #nullable enable
 
@@ -8,96 +7,75 @@ namespace jwellone.Samples
 {
     public class SampleScene : MonoBehaviour
     {
-        [SerializeField] Text _text = null!;
+        [SerializeField] float _duration = 0.25f;
         [SerializeField] Transform _target = null!;
+        [SerializeField] GameObject _prefab = null!;
+        [SerializeField] Material _mat1 = null!;
+        [SerializeField] Material _mat2 = null!;
+        InputManager? _inputManager => InputManager.instance;
 
-        InputManager _inputManager => InputManager.instance!;
-        InputHandler.StatusFlags[]? _prevStatusFlagsArray;
-
-        void Awake()
-        {
-            _text.text = string.Empty;
-            _prevStatusFlagsArray = new InputHandler.StatusFlags[_inputManager.createNum];
-        }
+        Coroutine? _coMove;
 
         void Update()
         {
-            var sb = new StringBuilder();
-            for (int i = 0; i < _inputManager.createNum; ++i)
+            var handle = _inputManager!.Get(0);
+            if (handle.isDoubleTap || handle.isRepeat)
             {
-                AppendInputInfoIfNeed(i, sb);
+                var ray = Camera.main.ScreenPointToRay(handle.position);
+                if (Physics.Raycast(ray, out var hit))
+                {
+                    var instance = Instantiate(_prefab);
+                    instance.transform.position = hit.point + Vector3.up / 2f;
+                    instance.GetComponent<MeshRenderer>().material = handle.isDoubleTap ? _mat1 : _mat2;
+                    instance.SetActive(true);
+                }
             }
 
-            var str = sb.ToString();
-            if (!string.IsNullOrEmpty(str))
-            {
-                _text.text += str;
-            }
-
-            if (!_inputManager.isPinching)
-            {
-                return;
-            }
-            var scale = _target.localScale;
-            scale += Vector3.one * _inputManager.pinchingDelta * 5;
-            _target.localScale = scale;
-
-            _target.Rotate(new Vector3(0, 0, -_inputManager.twoFingerRotation));
+            InputMove();
         }
 
-        public void OnClickReset()
+        void InputMove()
         {
-            _text.text = string.Empty;
-        }
-
-        void AppendInputInfoIfNeed(int index, StringBuilder sb)
-        {
-            var flags = InputHandler.StatusFlags.None;
-            var h = _inputManager.Get(index);
-            var text = string.Empty;
-
-            if (h.isTap)
-            {
-                flags |= InputHandler.StatusFlags.Tap;
-                text += "Tap|";
-            }
-
-            if (h.isDoubleTap)
-            {
-                flags |= InputHandler.StatusFlags.DoubleTap;
-                text += "DoubleTap|";
-                Debug.Log($"Double Tap");
-            }
-
-            if (h.isRepeat)
-            {
-                flags |= InputHandler.StatusFlags.Repeat;
-                text += "Repeat|";
-            }
-
-            if (h.isDown)
-            {
-                flags |= InputHandler.StatusFlags.Down;
-                text += "Down|";
-            }
-
-            if (h.isUp)
-            {
-                flags |= InputHandler.StatusFlags.Up;
-                text += "Up|";
-            }
-
-            if (flags == _prevStatusFlagsArray![index])
+            if (_coMove != null)
             {
                 return;
             }
 
-            _prevStatusFlagsArray![index] = flags;
-
-            if (!string.IsNullOrEmpty(text))
+            if (_inputManager!.isFlickLeft)
             {
-                sb.Append("Input[").Append(index).Append("] ").Append(text).Append(" ").AppendLine(Time.frameCount.ToString());
+                _coMove = StartCoroutine(Move(_target.position + Vector3.left, Quaternion.AngleAxis(90, Vector3.forward) * _target.rotation));
             }
+            else if (_inputManager!.isFlickRight)
+            {
+                _coMove = StartCoroutine(Move(_target.position + Vector3.right, Quaternion.AngleAxis(-90, Vector3.forward) * _target.rotation));
+            }
+            else if (_inputManager!.isFlickUp)
+            {
+                _coMove = StartCoroutine(Move(_target.position + Vector3.forward, Quaternion.AngleAxis(90, Vector3.right) * _target.rotation));
+            }
+            else if (_inputManager!.isFlickDown)
+            {
+                _coMove = StartCoroutine(Move(_target.position + Vector3.back, Quaternion.AngleAxis(-90, Vector3.right) * _target.rotation));
+            }
+        }
+
+        IEnumerator Move(Vector3 targetPos, Quaternion targetRot)
+        {
+            var time = 0f;
+            var pos = _target.position;
+            var rot = _target.rotation;
+            var rate = 0f;
+            var duration = Mathf.Max(0.01f, _duration);
+            do
+            {
+                time += Time.deltaTime;
+                rate = time / duration;
+                _target.position = Vector3.Lerp(pos, targetPos, rate);
+                _target.rotation = Quaternion.Lerp(rot, targetRot, rate);
+                yield return null;
+            } while (rate < 1f);
+
+            _coMove = null;
         }
     }
 }
