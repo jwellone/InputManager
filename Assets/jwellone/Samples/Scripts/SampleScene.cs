@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.UI;
 
 #nullable enable
 
@@ -12,6 +13,7 @@ namespace jwellone.Samples
         [SerializeField] GameObject _prefab = null!;
         [SerializeField] Material _mat1 = null!;
         [SerializeField] Material _mat2 = null!;
+        [SerializeField] Text[] _texts = null!;
         InputManager? _inputManager => InputManager.instance;
 
         Coroutine? _coMove;
@@ -29,6 +31,8 @@ namespace jwellone.Samples
                     instance.GetComponent<MeshRenderer>().material = handle.isDoubleTap ? _mat1 : _mat2;
                     instance.SetActive(true);
                 }
+
+                UpdateText(handle.isDoubleTap ? "Double tap" : "Repeat");
             }
 
             InputMove();
@@ -44,18 +48,22 @@ namespace jwellone.Samples
             if (_inputManager!.isFlickLeft)
             {
                 _coMove = StartCoroutine(Move(_target.position + Vector3.left, Quaternion.AngleAxis(90, Vector3.forward) * _target.rotation));
+                UpdateText("Flick left");
             }
             else if (_inputManager!.isFlickRight)
             {
                 _coMove = StartCoroutine(Move(_target.position + Vector3.right, Quaternion.AngleAxis(-90, Vector3.forward) * _target.rotation));
+                UpdateText("Flick right");
             }
             else if (_inputManager!.isFlickUp)
             {
                 _coMove = StartCoroutine(Move(_target.position + Vector3.forward, Quaternion.AngleAxis(90, Vector3.right) * _target.rotation));
+                UpdateText("Flick up");
             }
             else if (_inputManager!.isFlickDown)
             {
                 _coMove = StartCoroutine(Move(_target.position + Vector3.back, Quaternion.AngleAxis(-90, Vector3.right) * _target.rotation));
+                UpdateText("Flick down");
             }
         }
 
@@ -76,6 +84,16 @@ namespace jwellone.Samples
             } while (rate < 1f);
 
             _coMove = null;
+        }
+
+        void UpdateText(string text)
+        {
+            for (var i = _texts.Length - 1; i > 0; --i)
+            {
+                _texts[i].text = _texts[i - 1].text;
+            }
+
+            _texts[0].text = text;
         }
     }
 }
