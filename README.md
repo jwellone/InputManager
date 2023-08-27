@@ -23,6 +23,8 @@ This feature is one of the "j1Tech" developed by jwellone Inc for Unity.
 - Run editor.
 - Input information can be obtained by accessing the InputManager instance from the script.
 
+![inputmanager](https://github.com/jwellone/InputManager/assets/85072161/ef9f8201-34b5-460a-8fa4-8ac5defb3a85)
+
 ## Authors
 Developer:[Yasuhiko Usui.](https://github.com/UsuiYasuhiko-jw1)
 
